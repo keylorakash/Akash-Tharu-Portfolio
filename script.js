@@ -1,5 +1,4 @@
 // Typing animation
-const typedTextSpan = document.querySelector('.typed-text');
 const texts = ['Web Developer', 'UI/UX Designer', 'Cybersecurity Expert'];
 let textIndex = 0;
 let charIndex = 0;
@@ -52,6 +51,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 function type() {
+    const typedTextSpan = document.querySelector('.typed-text');
+    if (!typedTextSpan) return;
+    
     const currentText = texts[textIndex];
     
     if (isDeleting) {
@@ -74,44 +76,97 @@ function type() {
     }
 }
 
-// Start typing animation
-type();
-
 // Mobile Menu Functionality
-const menuBtn = document.querySelector('.menu-btn');
-const navLinks = document.querySelector('.nav-links');
+let menuBtn, navLinks;
 const body = document.body;
 
-menuBtn.addEventListener('click', () => {
-    menuBtn.classList.toggle('active');
-    navLinks.classList.toggle('active');
-    body.classList.toggle('menu-open');
-});
+function closeMenu() {
+    if (!menuBtn || !navLinks) return;
+    menuBtn.classList.remove('active');
+    navLinks.classList.remove('active');
+    body.classList.remove('menu-open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    // Fallback to ensure menu hides even if CSS conflicts
+    navLinks.style.right = '';
+    navLinks.style.display = '';
+}
 
-// Close menu when clicking a link
-document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', () => {
-        menuBtn.classList.remove('active');
-        navLinks.classList.remove('active');
-        body.classList.remove('menu-open');
+function openMenu() {
+    if (!menuBtn || !navLinks) return;
+    menuBtn.classList.add('active');
+    navLinks.classList.add('active');
+    body.classList.add('menu-open');
+    menuBtn.setAttribute('aria-expanded', 'true');
+    // Fallback to ensure menu shows on all devices
+    navLinks.style.display = 'flex';
+    navLinks.style.right = '0';
+}
+
+function initMenu() {
+    menuBtn = document.querySelector('.menu-btn');
+    navLinks = document.querySelector('.nav-links');
+    
+    if (!menuBtn || !navLinks) return;
+    
+    menuBtn.addEventListener('click', () => {
+        if (navLinks.classList.contains('active')) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
     });
-});
+
+    // Keyboard support for menu button
+    menuBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (navLinks.classList.contains('active')) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        }
+    });
+
+    // Touch support for Android
+    menuBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (navLinks.classList.contains('active')) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }, { passive: false });
+    
+    // Close menu when clicking a link
+    const navLinkEls = document.querySelectorAll('.nav-links a');
+    navLinkEls.forEach(link => {
+        link.addEventListener('click', () => {
+            closeMenu();
+        });
+        link.addEventListener('touchstart', () => {
+            closeMenu();
+        }, { passive: true });
+    });
+}
 
 // Close menu when clicking outside
-document.addEventListener('click', (e) => {
-    if (!menuBtn.contains(e.target) && !navLinks.contains(e.target) && navLinks.classList.contains('active')) {
-        menuBtn.classList.remove('active');
-        navLinks.classList.remove('active');
-        body.classList.remove('menu-open');
+function handleOutsideClick(e) {
+    if (menuBtn && navLinks && !menuBtn.contains(e.target) && !navLinks.contains(e.target) && navLinks.classList.contains('active')) {
+        closeMenu();
     }
-});
+}
+document.addEventListener('click', handleOutsideClick);
+document.addEventListener('touchstart', handleOutsideClick, { passive: true });
 
 // Handle window resize
 window.addEventListener('resize', () => {
-    if (window.innerWidth > 768) {
+    if (window.innerWidth > 768 && menuBtn && navLinks) {
         menuBtn.classList.remove('active');
         navLinks.classList.remove('active');
         body.classList.remove('menu-open');
+        navLinks.style.right = '';
+        navLinks.style.display = '';
     }
 });
 
@@ -163,78 +218,31 @@ filterButtons.forEach(button => {
     });
 });
 
-// Navbar scroll effect
-let lastScroll = 0;
+// Active link highlighting on scroll
+const sections = document.querySelectorAll('section[id]');
+const navAnchors = document.querySelectorAll('.nav-links a');
 
-window.addEventListener('scroll', () => {
-    const currentScroll = window.pageYOffset;
-
-    if (currentScroll <= 0) {
-        nav.classList.remove('scroll-up');
-        return;
-    }
-
-    if (currentScroll > lastScroll && !nav.classList.contains('scroll-down')) {
-        // Scroll Down
-        nav.classList.remove('scroll-up');
-        nav.classList.add('scroll-down');
-    } else if (currentScroll < lastScroll && nav.classList.contains('scroll-down')) {
-        // Scroll Up
-        nav.classList.remove('scroll-down');
-        nav.classList.add('scroll-up');
-    }
-    lastScroll = currentScroll;
-
-    // Add scrolled class when scrolling down
-    if (window.scrollY > 50) {
-        nav.classList.add('scrolled');
-    } else {
-        nav.classList.remove('scrolled');
-    }
-});
-
-// Form submission
-const contactForm = document.getElementById('contact-form');
-
-contactForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    // Get form values
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
-    const subject = document.getElementById('subject').value;
-    const message = document.getElementById('message').value;
-
-    // Here you would typically send the form data to a server
-    console.log('Form submitted:', { name, email, subject, message });
-
-    // Show success message
-    alert('Thank you for your message! I will get back to you soon.');
-    
-    // Reset form
-    contactForm.reset();
-});
-
-// Add animation on scroll
-const animateOnScroll = () => {
-    const elements = document.querySelectorAll('.animate');
-    
-    elements.forEach(element => {
-        const elementTop = element.getBoundingClientRect().top;
-        const elementBottom = element.getBoundingClientRect().bottom;
-        
-        if (elementTop < window.innerHeight && elementBottom > 0) {
-            element.style.opacity = '1';
-            element.style.transform = 'translateY(0)';
+const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        const id = entry.target.getAttribute('id');
+        const link = document.querySelector(`.nav-links a[href="#${id}"]`);
+        if (!link) return;
+        if (entry.isIntersecting) {
+            navAnchors.forEach(a => a.classList.remove('active'));
+            link.classList.add('active');
+            link.setAttribute('aria-current', 'page');
+        } else if (link.classList.contains('active')) {
+            link.classList.remove('active');
+            link.removeAttribute('aria-current');
         }
     });
-};
+}, { root: null, threshold: 0.6 });
 
-// Initial animation check
-animateOnScroll();
+sections.forEach(sec => sectionObserver.observe(sec));
 
-// Add scroll event listener
-window.addEventListener('scroll', animateOnScroll);
+// Form submission - removed duplicate handler (handled in handleResponsiveForm)
+
+// Removed manual scroll animation handler in favor of IntersectionObserver below
 
 // 3D tilt effect for cards
 document.querySelectorAll('.service-card, .portfolio-box, .skill').forEach(card => {
@@ -296,12 +304,11 @@ document.querySelectorAll('#contact-form input, #contact-form textarea').forEach
 // Enhanced Responsive Navigation
 const handleResponsiveNav = () => {
     const nav = document.querySelector('nav');
-    const menuBtn = document.querySelector('.menu-btn');
-    const navLinks = document.querySelector('.nav-links');
-    const body = document.body;
+    if (!nav) return;
+    
     let lastScroll = 0;
 
-    // Handle scroll events
+    // Handle scroll events (passive)
     window.addEventListener('scroll', () => {
         const currentScroll = window.pageYOffset;
 
@@ -319,39 +326,14 @@ const handleResponsiveNav = () => {
             nav.style.transform = 'translateY(0)';
         }
         lastScroll = currentScroll;
-    });
+    }, { passive: true });
 
-    // Enhanced mobile menu functionality
-    menuBtn.addEventListener('click', () => {
-        menuBtn.classList.toggle('active');
-        navLinks.classList.toggle('active');
-        body.classList.toggle('menu-open');
-    });
-
-    // Close menu on link click
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.addEventListener('click', () => {
-            menuBtn.classList.remove('active');
-            navLinks.classList.remove('active');
-            body.classList.remove('menu-open');
-        });
-    });
-
-    // Close menu on outside click
-    document.addEventListener('click', (e) => {
-        if (!menuBtn.contains(e.target) && !navLinks.contains(e.target) && navLinks.classList.contains('active')) {
-            menuBtn.classList.remove('active');
-            navLinks.classList.remove('active');
-            body.classList.remove('menu-open');
-        }
-    });
-
-    // Handle window resize
+    // Handle window resize for menu
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            if (window.innerWidth > 768) {
+            if (window.innerWidth > 768 && menuBtn && navLinks) {
                 menuBtn.classList.remove('active');
                 navLinks.classList.remove('active');
                 body.classList.remove('menu-open');
@@ -364,9 +346,10 @@ const handleResponsiveNav = () => {
 const handleResponsiveImages = () => {
     const images = document.querySelectorAll('img');
     images.forEach(img => {
-        // Add loading="lazy" for better performance
-        img.loading = 'lazy';
-        
+        // Only set lazy if not explicitly prioritized
+        if (!img.hasAttribute('loading')) {
+            img.loading = 'lazy';
+        }
         // Add error handling
         img.onerror = function() {
             this.src = 'placeholder.png';
@@ -415,36 +398,58 @@ const handleScrollAnimations = () => {
 // Enhanced Form Handling
 const handleResponsiveForm = () => {
     const form = document.getElementById('contact-form');
-    if (form) {
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            // Get form values
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData);
-            
-            // Validate form
-            let isValid = true;
-            form.querySelectorAll('input, textarea').forEach(field => {
-                if (!field.value.trim()) {
-                    isValid = false;
-                    field.classList.add('error');
-                } else {
-                    field.classList.remove('error');
-                }
-            });
+    if (!form) return;
+    
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        // Check Cloudflare Turnstile if present
+        const turnstileResponse = document.querySelector('input[name="cf-turnstile-response"]');
+        if (turnstileResponse && !turnstileResponse.value) {
+            alert('Please complete the security verification.');
+            return;
+        }
+        
+        // Get form values
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        // Validate form
+        let isValid = true;
+        form.querySelectorAll('input[required], textarea[required]').forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('error');
+            } else {
+                field.classList.remove('error');
+            }
+        });
 
-            if (isValid) {
-                // Show loading state
-                const submitBtn = form.querySelector('button[type="submit"]');
+        if (isValid) {
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
                 const originalText = submitBtn.textContent;
                 submitBtn.textContent = 'Sending...';
                 submitBtn.disabled = true;
 
                 // Simulate form submission
                 setTimeout(() => {
-                    // Reset form
+                    // Reset form (including Turnstile)
                     form.reset();
+                    // Reset Turnstile widget if present
+                    if (typeof turnstile !== 'undefined' && turnstile.reset) {
+                        try {
+                            turnstile.reset();
+                        } catch (e) {
+                            // Fallback: try to remove the hidden input manually
+                            const turnstileInput = document.querySelector('input[name="cf-turnstile-response"]');
+                            if (turnstileInput) {
+                                turnstileInput.remove();
+                            }
+                        }
+                    }
+                    
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
                     
@@ -452,12 +457,19 @@ const handleResponsiveForm = () => {
                     alert('Thank you for your message! I will get back to you soon.');
                 }, 1500);
             }
-        });
-    }
+        }
+    });
 };
 
 // Initialize all responsive features
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize menu functionality
+    initMenu();
+    
+    // Start typing animation
+    type();
+    
+    // Initialize other features
     handleResponsiveNav();
     handleResponsiveImages();
     handleTouchDevices();
